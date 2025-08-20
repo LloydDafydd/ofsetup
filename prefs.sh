@@ -1,0 +1,2 @@
+export SCOTCH_VERSION=6.0.6
+export ZOLTAN_VERSION=3.83
