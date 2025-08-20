@@ -13,7 +13,7 @@ local version = "5.0.8"
 local compiler = "gcc7.5.0"
 
 -- Set the installation prefix directory
-local base = "$home/local"
+local base = "$HOME/local"
 
 -- Set environment variables
 setenv("OMPI_DIR", base)
