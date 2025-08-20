@@ -9,4 +9,6 @@
 #SBATCH --output=test_case_%j.out
 #SBATCH --error=test_case_%j.err
 
+cd /home/u35e/lloyddafydd.u35e/OpenFOAM-dev
 ./Allwmake -q -j
+
