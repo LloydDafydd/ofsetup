@@ -93,7 +93,21 @@ fi
 # causes an immediate failure. Temporarily disable nounset while sourcing
 # so the sourced script can perform its own checks.
 set +u
+# Ensure ZSH_NAME is at least defined while sourcing to avoid "unbound variable" errors
+# Record whether it was originally unset so we can restore the state afterwards.
+if [ -z "${ZSH_NAME+x}" ]; then
+  __OPENFOAM_ZSHNAME_WAS_UNSET=1
+  ZSH_NAME=""
+else
+  __OPENFOAM_ZSHNAME_WAS_UNSET=0
+fi
 source "$FOAM_INST_DIR/OpenFOAM-dev/etc/bashrc"
+# Restore original ZSH_NAME state
+if [ "${__OPENFOAM_ZSHNAME_WAS_UNSET}" = "1" ]; then
+  unset ZSH_NAME __OPENFOAM_ZSHNAME_WAS_UNSET
+else
+  unset __OPENFOAM_ZSHNAME_WAS_UNSET
+fi
 set -u
 
 # Build ThirdParty first (some components required by OpenFOAM)
