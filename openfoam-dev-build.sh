@@ -86,60 +86,40 @@ if command -v module >/dev/null 2>&1; then
   module use "$HOME/.modules" || true
 fi
 
-# Source OpenFOAM environment (sets WM_PROJECT_DIR etc.)
-# If your shell rejected sourcing, run in bash
-# The OpenFOAM-provided bashrc can reference variables such as ZSH_NAME
-# without guarding them; our script runs with `set -u` (nounset) which
-# causes an immediate failure. Temporarily disable nounset while sourcing
-# so the sourced script can perform its own checks.
-set +u
-# Export a safe empty ZSH_NAME so the OpenFOAM bashrc (which may reference
-# it) does not trigger "unbound variable" under `set -u`.
-export ZSH_NAME=""
-source "$FOAM_INST_DIR/OpenFOAM-dev/etc/bashrc"
-set -u
+# Run builds inside isolated bash subshells that source the OpenFOAM bashrc
+# This prevents the sourced file from calling `exit` or otherwise terminating
+# the main script. The subshell will inherit exported env vars (PATH, LD_LIBRARY_PATH).
+echo "[build] Running builds in isolated subshells (logs -> $LOGDIR)"
 
-# Build ThirdParty first (some components required by OpenFOAM)
-cd "$FOAM_INST_DIR/ThirdParty-dev"
-echo "[build] Entered $(pwd)"
-ls -la . | sed -n '1,200p'
-if [ ! -f ./Allwmake ]; then
-  echo "[build][error] ./Allwmake not found in $(pwd); aborting."
-  exit 1
-fi
-if [ ! -x ./Allwmake ]; then
-  echo "[build] Making ./Allwmake executable"
-  chmod +x ./Allwmake || true
-fi
-echo "[build] Running ThirdParty Allwmake (logs -> $LOGDIR/thirdparty-allwmake.log)"
+# ThirdParty build
+THIRD_CMD='source "'"$FOAM_INST_DIR"'/OpenFOAM-dev/etc/bashrc" >/dev/null 2>&1 || true; '
+THIRD_CMD+='cd "'"$FOAM_INST_DIR"'/ThirdParty-dev" && '
+THIRD_CMD+='./Allwmake -j "'"$NJOBS"'"'
+
+echo "[build] Executing ThirdParty build in subshell"
 set +e
-./Allwmake -j "$NJOBS" &> "$LOGDIR/thirdparty-allwmake.log"
+bash -lc "$THIRD_CMD" &> "$LOGDIR/thirdparty-allwmake.log"
 status=$?
 set -e
-cat "$LOGDIR/thirdparty-allwmake.log"
+echo "[build] ThirdParty build log (first 200 lines):"
+sed -n '1,200p' "$LOGDIR/thirdparty-allwmake.log" || true
 if [ $status -ne 0 ]; then
   echo "[build][error] ThirdParty Allwmake failed with exit code $status; see $LOGDIR/thirdparty-allwmake.log"
   exit $status
 fi
 
-# Build OpenFOAM
-cd "$FOAM_INST_DIR/OpenFOAM-dev"
-echo "[build] Entered $(pwd)"
-ls -la . | sed -n '1,200p'
-if [ ! -f ./Allwmake ]; then
-  echo "[build][error] ./Allwmake not found in $(pwd); aborting."
-  exit 1
-fi
-if [ ! -x ./Allwmake ]; then
-  echo "[build] Making ./Allwmake executable"
-  chmod +x ./Allwmake || true
-fi
-echo "[build] Running OpenFOAM Allwmake (logs -> $LOGDIR/openfoam-allwmake.log)"
+# OpenFOAM build
+OPEN_CMD='source "'"$FOAM_INST_DIR"'/OpenFOAM-dev/etc/bashrc" >/dev/null 2>&1 || true; '
+OPEN_CMD+='cd "'"$FOAM_INST_DIR"'/OpenFOAM-dev" && '
+OPEN_CMD+='./Allwmake -j "'"$NJOBS"'"'
+
+echo "[build] Executing OpenFOAM build in subshell"
 set +e
-./Allwmake -j "$NJOBS" &> "$LOGDIR/openfoam-allwmake.log"
+bash -lc "$OPEN_CMD" &> "$LOGDIR/openfoam-allwmake.log"
 status=$?
 set -e
-cat "$LOGDIR/openfoam-allwmake.log"
+echo "[build] OpenFOAM build log (first 200 lines):"
+sed -n '1,200p' "$LOGDIR/openfoam-allwmake.log" || true
 if [ $status -ne 0 ]; then
   echo "[build][error] OpenFOAM Allwmake failed with exit code $status; see $LOGDIR/openfoam-allwmake.log"
   exit $status
