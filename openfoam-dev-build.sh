@@ -88,7 +88,13 @@ fi
 
 # Source OpenFOAM environment (sets WM_PROJECT_DIR etc.)
 # If your shell rejected sourcing, run in bash
+# The OpenFOAM-provided bashrc can reference variables such as ZSH_NAME
+# without guarding them; our script runs with `set -u` (nounset) which
+# causes an immediate failure. Temporarily disable nounset while sourcing
+# so the sourced script can perform its own checks.
+set +u
 source "$FOAM_INST_DIR/OpenFOAM-dev/etc/bashrc"
+set -u
 
 # Build ThirdParty first (some components required by OpenFOAM)
 cd "$FOAM_INST_DIR/ThirdParty-dev"
