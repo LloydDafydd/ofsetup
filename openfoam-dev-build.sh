@@ -101,9 +101,47 @@ set -u
 
 # Build ThirdParty first (some components required by OpenFOAM)
 cd "$FOAM_INST_DIR/ThirdParty-dev"
-./Allwmake -j "$NJOBS" 2>&1 | tee "$LOGDIR/thirdparty-allwmake.log"
+echo "[build] Entered $(pwd)"
+ls -la . | sed -n '1,200p'
+if [ ! -f ./Allwmake ]; then
+  echo "[build][error] ./Allwmake not found in $(pwd); aborting."
+  exit 1
+fi
+if [ ! -x ./Allwmake ]; then
+  echo "[build] Making ./Allwmake executable"
+  chmod +x ./Allwmake || true
+fi
+echo "[build] Running ThirdParty Allwmake (logs -> $LOGDIR/thirdparty-allwmake.log)"
+set +e
+./Allwmake -j "$NJOBS" &> "$LOGDIR/thirdparty-allwmake.log"
+status=$?
+set -e
+cat "$LOGDIR/thirdparty-allwmake.log"
+if [ $status -ne 0 ]; then
+  echo "[build][error] ThirdParty Allwmake failed with exit code $status; see $LOGDIR/thirdparty-allwmake.log"
+  exit $status
+fi
 
 # Build OpenFOAM
 cd "$FOAM_INST_DIR/OpenFOAM-dev"
-./Allwmake -j "$NJOBS" 2>&1 | tee "$LOGDIR/openfoam-allwmake.log"
+echo "[build] Entered $(pwd)"
+ls -la . | sed -n '1,200p'
+if [ ! -f ./Allwmake ]; then
+  echo "[build][error] ./Allwmake not found in $(pwd); aborting."
+  exit 1
+fi
+if [ ! -x ./Allwmake ]; then
+  echo "[build] Making ./Allwmake executable"
+  chmod +x ./Allwmake || true
+fi
+echo "[build] Running OpenFOAM Allwmake (logs -> $LOGDIR/openfoam-allwmake.log)"
+set +e
+./Allwmake -j "$NJOBS" &> "$LOGDIR/openfoam-allwmake.log"
+status=$?
+set -e
+cat "$LOGDIR/openfoam-allwmake.log"
+if [ $status -ne 0 ]; then
+  echo "[build][error] OpenFOAM Allwmake failed with exit code $status; see $LOGDIR/openfoam-allwmake.log"
+  exit $status
+fi
 echo "Build logs in $LOGDIR"
