@@ -86,42 +86,6 @@ if command -v module >/dev/null 2>&1; then
   module use "$HOME/.modules" || true
 fi
 
-# Run builds inside isolated bash subshells that source the OpenFOAM bashrc
-# This prevents the sourced file from calling `exit` or otherwise terminating
-# the main script. The subshell will inherit exported env vars (PATH, LD_LIBRARY_PATH).
-echo "[build] Running builds in isolated subshells (logs -> $LOGDIR)"
-
-# ThirdParty build
-THIRD_CMD='source "'"$FOAM_INST_DIR"'/OpenFOAM-dev/etc/bashrc" >/dev/null 2>&1 || true; '
-THIRD_CMD+='cd "'"$FOAM_INST_DIR"'/ThirdParty-dev" && '
-THIRD_CMD+='./Allwmake -j "'"$NJOBS"'"'
-
-echo "[build] Executing ThirdParty build in subshell"
-set +e
-bash -lc "$THIRD_CMD" &> "$LOGDIR/thirdparty-allwmake.log"
-status=$?
-set -e
-echo "[build] ThirdParty build log (first 200 lines):"
-sed -n '1,200p' "$LOGDIR/thirdparty-allwmake.log" || true
-if [ $status -ne 0 ]; then
-  echo "[build][error] ThirdParty Allwmake failed with exit code $status; see $LOGDIR/thirdparty-allwmake.log"
-  exit $status
-fi
-
-# OpenFOAM build
-OPEN_CMD='source "'"$FOAM_INST_DIR"'/OpenFOAM-dev/etc/bashrc" >/dev/null 2>&1 || true; '
-OPEN_CMD+='cd "'"$FOAM_INST_DIR"'/OpenFOAM-dev" && '
-OPEN_CMD+='./Allwmake -j "'"$NJOBS"'"'
-
-echo "[build] Executing OpenFOAM build in subshell"
-set +e
-bash -lc "$OPEN_CMD" &> "$LOGDIR/openfoam-allwmake.log"
-status=$?
-set -e
-echo "[build] OpenFOAM build log (first 200 lines):"
-sed -n '1,200p' "$LOGDIR/openfoam-allwmake.log" || true
-if [ $status -ne 0 ]; then
-  echo "[build][error] OpenFOAM Allwmake failed with exit code $status; see $LOGDIR/openfoam-allwmake.log"
-  exit $status
-fi
-echo "Build logs in $LOGDIR"
+echo "[build] Clone step finished. To run the actual builds, run the stage-2 script:"
+echo "  bash \"$HOME/openfoam-dev-build-stage2.sh\"  # set NJOBS/FOAM_INST_DIR as needed"
+echo "Build logs (clone) are in $LOGDIR"
